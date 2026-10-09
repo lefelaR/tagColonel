@@ -1,0 +1,148 @@
+# FairwayFlow infrastructure. Each service has one runtime responsibility (SRP).
+# Secrets and hosts come from .env (DIP). Nothing sensitive is baked into images.
+
+name: ${COMPOSE_PROJECT_NAME:-fairwayflow}
+
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?set MYSQL_DATABASE in .env}
+      MYSQL_USER: ${MYSQL_USER:?set MYSQL_USER in .env}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    networks:
+      - fairwayflow
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:${REDIS_PUBLISH_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - fairwayflow
+
+  laravel:
+    build:
+      context: ./laravel
+      dockerfile: Dockerfile
+    image: fairwayflow-laravel
+    restart: unless-stopped
+    init: true
+    environment:
+      APP_NAME: FairwayFlow
+      APP_ENV: ${APP_ENV:-local}
+      APP_KEY: ${APP_KEY:?set APP_KEY in .env}
+      APP_DEBUG: ${APP_DEBUG:-true}
+      APP_URL: http://localhost:${LARAVEL_PORT:-8000}
+      DB_CONNECTION: mysql
+      DB_HOST: ${DB_HOST:-mysql}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_DATABASE: ${MYSQL_DATABASE:?set MYSQL_DATABASE in .env}
+      DB_USERNAME: ${MYSQL_USER:?set MYSQL_USER in .env}
+      DB_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}
+      REDIS_CLIENT: phpredis
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      SESSION_DRIVER: redis
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: sync
+    ports:
+      - "${LARAVEL_PORT:-8000}:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(str_contains((string)@file_get_contents('http://127.0.0.1:8000/health'), '\"status\":\"ok\"') ? 0 : 1);"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks:
+      - fairwayflow
+
+  node-realtime:
+    build:
+      context: ./node-realtime
+      dockerfile: Dockerfile
+    image: fairwayflow-node-realtime
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      SOCKET_PORT: 3001
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      LARAVEL_API: ${LARAVEL_API:-http://laravel:8000}
+    ports:
+      - "${NODE_PORT:-3000}:3000"
+      - "${SOCKET_PORT:-3001}:3001"
+    depends_on:
+      redis:
+        condition: service_healthy
+      laravel:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    networks:
+      - fairwayflow
+
+  vue-dashboard:
+    build:
+      context: ./vue-dashboard
+      dockerfile: Dockerfile
+    image: fairwayflow-vue-dashboard
+    restart: unless-stopped
+    environment:
+      VITE_LARAVEL_API: ${VITE_LARAVEL_API:-http://localhost:8000}
+      VITE_SOCKET_URL: ${VITE_SOCKET_URL:-http://localhost:3001}
+    ports:
+      - "${VUE_PORT:-5173}:5173"
+    depends_on:
+      laravel:
+        condition: service_healthy
+      node-realtime:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5173/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    networks:
+      - fairwayflow
+
+volumes:
+  mysql_data:
+  redis_data:
+
+networks:
+  fairwayflow:
+    driver: bridge
