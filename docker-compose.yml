@@ -66,6 +66,8 @@ services:
       REDIS_CLIENT: phpredis
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
+      # Empty on purpose. Node writes fairwayflow:course:* with no prefix.
+      REDIS_PREFIX: ${REDIS_PREFIX:-}
       SESSION_DRIVER: redis
       CACHE_STORE: redis
       QUEUE_CONNECTION: sync
@@ -77,7 +79,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "php", "-r", "exit(str_contains((string)@file_get_contents('http://127.0.0.1:8000/health'), '\"status\":\"ok\"') ? 0 : 1);"]
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8000/up') === false ? 1 : 0);"]
       interval: 5s
       timeout: 5s
       retries: 12
@@ -124,8 +126,10 @@ services:
     image: fairwayflow-vue-dashboard
     restart: unless-stopped
     environment:
+      # Browser URLs. The dashboard container is not the browser, so these stay on localhost.
       VITE_LARAVEL_API: ${VITE_LARAVEL_API:-http://localhost:8000}
       VITE_SOCKET_URL: ${VITE_SOCKET_URL:-http://localhost:3001}
+      VITE_COURSE_ID: ${VITE_COURSE_ID:-1}
     ports:
       - "${VUE_PORT:-5173}:5173"
     depends_on:
