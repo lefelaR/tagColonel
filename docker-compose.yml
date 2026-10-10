@@ -97,6 +97,9 @@ services:
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
       LARAVEL_API: ${LARAVEL_API:-http://laravel:8000}
+      SIMULATOR_ENABLED: "true"
+      SIMULATOR_CARTS: 30
+      SIMULATOR_INTERVAL_MS: 3000
     ports:
       - "${NODE_PORT:-3000}:3000"
       - "${SOCKET_PORT:-3001}:3001"

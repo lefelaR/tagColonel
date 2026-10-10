@@ -7,10 +7,30 @@ namespace Infrastructure\Persistence\Eloquent;
 use Domain\Cart\Models\Position;
 use Domain\Cart\Repositories\PositionRepositoryInterface;
 use Domain\Cart\ValueObjects\CartId;
+use Domain\Cart\ValueObjects\Hole;
+use Domain\Cart\ValueObjects\Speed;
+use Domain\Course\ValueObjects\GeoCoordinate;
 
 // Infrastructure adapter for GPS history in MySQL.
 final class PositionEloquentRepository implements PositionRepositoryInterface
 {
+    public function append(
+        CartId $cartId,
+        GeoCoordinate $coordinate,
+        Speed $speed,
+        Hole $hole,
+        \DateTimeImmutable $recordedAt,
+    ): void {
+        $this->save(new Position([
+            'cart_id' => $cartId->value,
+            'latitude' => $coordinate->lat,
+            'longitude' => $coordinate->lng,
+            'speed' => $speed->metersPerSecond,
+            'hole' => $hole->number,
+            'recorded_at' => $recordedAt,
+        ]));
+    }
+
     public function save(Position $position): void
     {
         $position->save();
