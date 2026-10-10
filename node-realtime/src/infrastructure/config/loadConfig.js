@@ -16,6 +16,32 @@ function requiredPort(env, key) {
   return port;
 }
 
+function flag(env, key, fallback) {
+  const value = env[key];
+  if (value === undefined || value === '') {
+    return fallback;
+  }
+  if (value === 'true') {
+    return true;
+  }
+  if (value === 'false') {
+    return false;
+  }
+  throw new Error(`${key} must be true or false`);
+}
+
+function optionalPositiveInt(env, key, fallback) {
+  const value = env[key];
+  if (value === undefined || value === '') {
+    return fallback;
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error(`${key} must be a positive integer`);
+  }
+  return parsed;
+}
+
 export function loadConfig(env) {
   return Object.freeze({
     port: requiredPort(env, 'PORT'),
@@ -23,5 +49,8 @@ export function loadConfig(env) {
     redisHost: required(env, 'REDIS_HOST'),
     redisPort: requiredPort(env, 'REDIS_PORT'),
     laravelApi: required(env, 'LARAVEL_API'),
+    simulatorEnabled: flag(env, 'SIMULATOR_ENABLED', false),
+    simulatorCarts: optionalPositiveInt(env, 'SIMULATOR_CARTS', 30),
+    simulatorIntervalMs: optionalPositiveInt(env, 'SIMULATOR_INTERVAL_MS', 3000),
   });
 }

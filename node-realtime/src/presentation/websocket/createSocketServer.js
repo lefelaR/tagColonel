@@ -1,5 +1,6 @@
 import { createServer } from 'node:http';
 import { Server } from 'socket.io';
+import { registerSocketHandlers } from './socketHandler.js';
 
 // SRP: Socket.io listener only. No pace or geofence logic in the connection handler.
 export function createSocketServer() {
@@ -17,7 +18,7 @@ export function createSocketServer() {
     cors: { origin: true },
   });
 
-  io.on('connection', () => {});
+  registerSocketHandlers(io);
 
-  return httpServer;
+  return { httpServer, io };
 }
