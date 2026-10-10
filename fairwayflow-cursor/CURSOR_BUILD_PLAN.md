@@ -22,9 +22,9 @@ You are building FairwayFlow per .cursor/rules/fairwayflow-ddd-solid.mdc (DDD + 
 Task Phase 1: Create docker-compose.yml and all Dockerfiles:
 - mysql:8.0, redis:7-alpine, laravel (php:8.3-fpm + composer), node-realtime (node:20-alpine), vue-dashboard (node:20-alpine)
 - Laravel serves on 8000, Node API 3000 + Socket.io 3001, Vue 5173
-- All services depend correctly, env vars: DB_HOST=mysql, REDIS_HOST=redis, LARAVEL_API=http://laravel:8000
-- Generate docker-compose.yml at root, Dockerfiles in each service
-
+- All services depGenerate docker-compose.yml at root, Dockerfiles in each service
+end correctly, env vars: DB_HOST=mysql, REDIS_HOST=redis, LARAVEL_API=http://laravel:8000
+- 
 Follow SOLID: no hardcoded secrets, use env.
 ```
 

@@ -28,6 +28,11 @@ final class ListCoursesUseCase
 
     private function toDto(Course $course): CourseDTO
     {
-        return new CourseDTO((int) $course->id, (string) $course->name);
+        return new CourseDTO(
+            (int) $course->id,
+            (string) $course->name,
+            (float) ($course->latitude ?? 0),
+            (float) ($course->longitude ?? 0),
+        );
     }
 }
