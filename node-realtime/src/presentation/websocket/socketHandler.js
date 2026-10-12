@@ -22,6 +22,12 @@ export function registerSocketHandlers(io) {
         return;
       }
 
+      for (const room of socket.rooms ?? []) {
+        if (typeof room === 'string' && room.startsWith('course:')) {
+          socket.leave(room);
+        }
+      }
+
       socket.join(courseRoom(id));
     });
 
