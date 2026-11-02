@@ -48,9 +48,8 @@ flowchart LR
 
 Laravel owns the course, the fleet, pace rules, and history. Node owns the high-frequency GPS path and the live socket. Vue is the marshal screen. Redis GEO is the live map. MySQL stores courses, carts, geofences, alerts, and position history.
 
-## Demo script
 
-At RoomRaccoon I worked Laravel heavy with real-time channel manager updates. For Tagmarshal I built FairwayFlow to show the same pattern: Laravel DDD for courses and rounds, with domain logic kept pure and free of the framework; Node for high-throughput GPS; Vue for the marshal. The key decision is Redis GEO for the live view, MySQL for position history, and a GeoCoordinate value object so an invalid latitude or longitude never gets in. The course menu starts on Rondebosch Golf Club and also lists Royal Cape, Milnerton, and Steenberg. Each course shows 30 carts. On Rondebosch, carts 26–28 are slow and 29 and 30 are very slow. The same last-five pattern repeats on the other courses, and each worsening pace creates one alert.
+
 
 ## Why the split
 
