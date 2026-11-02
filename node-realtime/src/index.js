@@ -5,7 +5,7 @@ import { createIngestGpsUseCase } from './application/ingest/IngestGpsUseCase.js
 import { loadConfig } from './infrastructure/config/loadConfig.js';
 import { createLaravelApiClient } from './infrastructure/laravel/LaravelApiClient.js';
 import { createLiveCartRedisRepo } from './infrastructure/redis/LiveCartRedisRepo.js';
-import { startGpsSimulator } from './infrastructure/simulator/gpsSimulator.js';
+import { CAPE_TOWN_COURSES, startGpsSimulator } from './infrastructure/simulator/gpsSimulator.js';
 import { createApp } from './presentation/http/createApp.js';
 import { createHttpController } from './presentation/http/createHttpController.js';
 import { createSocketBroadcaster } from './presentation/websocket/createSocketBroadcaster.js';
@@ -45,6 +45,7 @@ if (config.simulatorEnabled) {
     port: config.port,
     cartCount: config.simulatorCarts,
     intervalMs: config.simulatorIntervalMs,
+    courses: CAPE_TOWN_COURSES,
   });
 }
 

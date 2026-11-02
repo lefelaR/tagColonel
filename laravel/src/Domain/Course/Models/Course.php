@@ -11,5 +11,12 @@ class Course extends Model
 {
     protected $fillable = [
         'name',
+        'latitude',
+        'longitude',
+    ];
+
+    protected $casts = [
+        'latitude' => 'float',
+        'longitude' => 'float',
     ];
 }

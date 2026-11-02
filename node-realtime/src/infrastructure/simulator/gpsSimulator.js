@@ -1,27 +1,36 @@
-const ORIGIN = { lat: -33.9249, lng: 18.4241 };
+// Rondebosch stays first. The other three are selectable Cape Town courses.
+export const CAPE_TOWN_COURSES = [
+  { courseId: 1, lat: -33.956, lng: 18.4943 },
+  { courseId: 2, lat: -34.0136, lng: 18.4851 },
+  { courseId: 3, lat: -33.8617, lng: 18.4927 },
+  { courseId: 4, lat: -34.0722, lng: 18.4279 },
+];
+
 const STEP_DEGREES = 0.0002;
 
-function paceSample(cartId) {
-  if (cartId >= 29) {
+function paceSample(index, cartCount) {
+  if (index >= cartCount - 2) {
     return { actual_seconds: 130, par_seconds: 100 };
   }
 
-  if (cartId >= 26) {
+  if (index >= cartCount - 5) {
     return { actual_seconds: 115, par_seconds: 100 };
   }
 
   return { actual_seconds: 100, par_seconds: 100 };
 }
 
-function createCarts(cartCount, random) {
+function createCarts(course, cartCount, random) {
   return Array.from({ length: cartCount }, (_unused, index) => {
-    const cartId = index + 1;
+    const cartId = ((course.courseId - 1) * cartCount) + index + 1;
     return {
       cartId,
-      lat: ORIGIN.lat + ((index - cartCount / 2) * 0.0001),
-      lng: ORIGIN.lng + ((index - cartCount / 2) * 0.0001),
+      courseId: course.courseId,
+      lat: course.lat + ((index - cartCount / 2) * 0.0001),
+      lng: course.lng + ((index - cartCount / 2) * 0.0001),
       speed: 1 + (cartId % 5),
       hole: (cartId % 18) + 1,
+      pace: paceSample(index, cartCount),
       random,
     };
   });
@@ -37,10 +46,12 @@ export function startGpsSimulator({
   port,
   cartCount = 30,
   intervalMs = 3000,
+  courses,
   fetchImpl = globalThis.fetch,
   random = Math.random,
 }) {
-  const carts = createCarts(cartCount, random);
+  const fleets = courses ?? [CAPE_TOWN_COURSES[0]];
+  const carts = fleets.flatMap((course) => createCarts(course, cartCount, random));
 
   async function postCart(cart) {
     step(cart);
@@ -49,12 +60,12 @@ export function startGpsSimulator({
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         cart_id: cart.cartId,
-        course_id: 1,
+        course_id: cart.courseId,
         lat: cart.lat,
         lng: cart.lng,
         speed: cart.speed,
         hole: cart.hole,
-        ...paceSample(cart.cartId),
+        ...cart.pace,
       }),
     });
 

@@ -1,3 +1,10 @@
+export interface GolfCourse {
+  id: number
+  name: string
+  latitude: number
+  longitude: number
+}
+
 export type PaceStatus = 'on_pace' | 'slow' | 'very_slow'
 
 export interface LiveCart {

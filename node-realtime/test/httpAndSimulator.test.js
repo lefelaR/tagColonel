@@ -4,7 +4,7 @@ import { createCheckGeofenceUseCase } from '../src/application/geofence/CheckGeo
 import { createApp } from '../src/presentation/http/createApp.js';
 import { createHttpController } from '../src/presentation/http/createHttpController.js';
 import { registerSocketHandlers } from '../src/presentation/websocket/socketHandler.js';
-import { startGpsSimulator } from '../src/infrastructure/simulator/gpsSimulator.js';
+import { CAPE_TOWN_COURSES, startGpsSimulator } from '../src/infrastructure/simulator/gpsSimulator.js';
 
 function listen(app) {
   return new Promise((resolve) => {
@@ -86,19 +86,26 @@ test('POST /geofence/check answers from the ray cast', async () => {
 test('socket handler joins a course room and relays a marshal message', () => {
   const emitted = [];
   const joined = [];
+  const rooms = new Set();
   const io = {
     on(event, handler) {
       assert.equal(event, 'connection');
       const socket = {
+        rooms,
         on(name, listener) {
           socket[name] = listener;
         },
         join(room) {
+          rooms.add(room);
           joined.push(room);
+        },
+        leave(room) {
+          rooms.delete(room);
         },
       };
       handler(socket);
       socket['join:course'](1);
+      socket['join:course'](2);
       socket['marshal:message']({ course_id: 1, message: '  Hold at the tee  ' });
     },
     to(room) {
@@ -112,13 +119,14 @@ test('socket handler joins a course room and relays a marshal message', () => {
 
   registerSocketHandlers(io);
 
-  assert.deepEqual(joined, ['course:1']);
+  assert.deepEqual(joined, ['course:1', 'course:2']);
+  assert.deepEqual([...rooms], ['course:2']);
   assert.equal(emitted[0].room, 'course:1');
   assert.equal(emitted[0].event, 'marshal:message');
   assert.equal(emitted[0].payload.message, 'Hold at the tee');
 });
 
-test('simulator posts thirty carts near Cape Town to its own ingest route', () => {
+test('simulator posts thirty carts at Rondebosch Golf Club', () => {
   const calls = [];
   const stop = startGpsSimulator({
     port: 3000,
@@ -136,9 +144,33 @@ test('simulator posts thirty carts near Cape Town to its own ingest route', () =
     assert.equal(calls[0].url, 'http://127.0.0.1:3000/ingest');
     assert.deepEqual(calls.map((call) => call.body.cart_id), Array.from({ length: 30 }, (_v, i) => i + 1));
     assert.equal(calls[0].body.course_id, 1);
-    assert.ok(Math.abs(calls[0].body.lat + 33.9249) < 0.01);
+    assert.ok(Math.abs(calls[0].body.lat + 33.956) < 0.01);
+    assert.ok(Math.abs(calls[0].body.lng - 18.4943) < 0.01);
     assert.equal(calls[25].body.actual_seconds, 115);
     assert.equal(calls[29].body.actual_seconds, 130);
+  } finally {
+    stop();
+  }
+});
+
+test('simulator posts a fleet for each Cape Town course', () => {
+  const calls = [];
+  const stop = startGpsSimulator({
+    port: 3000,
+    cartCount: 2,
+    intervalMs: 60_000,
+    courses: CAPE_TOWN_COURSES,
+    random: () => 0.5,
+    fetchImpl: async (_url, options) => {
+      calls.push(JSON.parse(options.body));
+      return { ok: true };
+    },
+  });
+
+  try {
+    assert.deepEqual([...new Set(calls.map((call) => call.course_id))], [1, 2, 3, 4]);
+    assert.equal(calls.length, 8);
+    assert.ok(Math.abs(calls.find((call) => call.course_id === 3).lat + 33.8617) < 0.01);
   } finally {
     stop();
   }

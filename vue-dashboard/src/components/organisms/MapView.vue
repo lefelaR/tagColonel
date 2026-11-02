@@ -4,7 +4,11 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { paceMarkerColor } from '../../styles/pace'
 import type { LiveCart } from '../../types/dashboard'
 
-const props = defineProps<{ carts: LiveCart[] }>()
+const props = defineProps<{
+  carts: LiveCart[]
+  latitude: number
+  longitude: number
+}>()
 
 const mapEl = ref<HTMLElement | null>(null)
 let map: L.Map | null = null
@@ -52,7 +56,7 @@ function onResize() {
 onMounted(() => {
   if (!mapEl.value) return
 
-  map = L.map(mapEl.value, { zoomControl: true }).setView([-33.9249, 18.4241], 16)
+  map = L.map(mapEl.value, { zoomControl: true }).setView([props.latitude, props.longitude], 15)
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap',
     maxZoom: 19,
@@ -63,6 +67,10 @@ onMounted(() => {
 })
 
 watch(() => props.carts, (carts) => syncMarkers(carts), { deep: true })
+
+watch(() => [props.latitude, props.longitude], () => {
+  map?.setView([props.latitude, props.longitude], 15)
+})
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', onResize)
